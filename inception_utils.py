@@ -10,7 +10,8 @@
     IS/FID code. You *must* use the TF model if you wish to report and compare
     numbers. This code tends to produce IS values that are 5-10% lower than
     those obtained through TF. 
-'''    
+'''
+import math
 import numpy as np
 from scipy import linalg # For numpy FID
 import time
@@ -226,7 +227,7 @@ def torch_calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
   diff = mu1 - mu2
   # Run 50 itrs of newton-schulz to get the matrix sqrt of sigma1 dot sigma2
   covmean = sqrt_newton_schulz(sigma1.mm(sigma2).unsqueeze(0), 50).squeeze()  
-  out = (diff.dot(diff) +  torch.trace(sigma1) + torch.trace(sigma2)
+  out = (diff.dot(diff) + torch.trace(sigma1) + torch.trace(sigma2)
          - 2 * torch.trace(covmean))
   return out
 
@@ -302,7 +303,8 @@ def prepare_inception_metrics(dataset, parallel, no_fid=False):
       if use_torch:
         FID = torch_calculate_frechet_distance(mu, sigma, torch.tensor(data_mu).float().cuda(), torch.tensor(data_sigma).float().cuda())
         FID = float(FID.cpu().numpy())
-      else:
+      if math.isnan(FID):
+        print('torch FID computation returned NaN. Attempting with numpy')
         FID = numpy_calculate_frechet_distance(mu.cpu().numpy(), sigma.cpu().numpy(), data_mu, data_sigma)
     # Delete mu, sigma, pool, logits, and labels, just in case
     del mu, sigma, pool, logits, labels
